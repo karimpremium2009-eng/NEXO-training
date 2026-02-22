@@ -37,6 +37,12 @@
             </div>
 
             <div id="view-dashboard" class="view">
+                
+                <div class="card" style="border: 2px solid var(--accent);">
+                    <h2>Today's Plan: <span id="today-day-name"></span></h2>
+                    <p id="today-program-text" style="font-weight: 600; font-size: 1.1rem; color: var(--accent);">Loading...</p>
+                </div>
+
                 <div class="card dark-card">
                     <h2>Quick Actions</h2>
                     <div class="action-grid">
@@ -73,7 +79,7 @@
                     <form id="run-form">
                         <input type="number" id="run-distance" step="0.01" placeholder="Distance (km)" required>
                         <input type="number" id="run-time" placeholder="Time (minutes)" required>
-                        <div class="stats-preview" id="run-pace-preview">Pace: 0.00 min/km</div>
+                        <div class="stats-preview" id="run-pace-preview">Speed: 0.00 km/h</div>
                         <button type="submit" class="btn-primary w-100">
                             <span class="btn-text">Save Run</span>
                             <div class="loader hidden"></div>
@@ -110,12 +116,30 @@
                     <form id="profile-form">
                         <input type="text" id="prof-name" placeholder="Name">
                         <div class="input-row">
-                            <input type="number" id="prof-weight" placeholder="Weight">
-                            <input type="number" id="prof-height" placeholder="Height">
+                            <input type="number" id="prof-weight" placeholder="Weight (kg)">
+                            <input type="number" id="prof-height" placeholder="Height (cm)">
                         </div>
                         <input type="text" id="prof-goal" placeholder="Main Fitness Goal">
                         <button type="submit" class="btn-secondary w-100">
                             <span class="btn-text">Update Profile</span>
+                            <div class="loader hidden"></div>
+                        </button>
+                    </form>
+                </div>
+
+                <h3 class="section-title">Weekly Gym Program</h3>
+                <div class="card">
+                    <p style="margin-bottom: 15px; font-size: 0.9rem; color: #666;">Leave blank for rest days.</p>
+                    <form id="program-form">
+                        <input type="text" id="prog-mon" placeholder="Monday (e.g. Chest, Triceps)">
+                        <input type="text" id="prog-tue" placeholder="Tuesday (e.g. Back, Biceps)">
+                        <input type="text" id="prog-wed" placeholder="Wednesday">
+                        <input type="text" id="prog-thu" placeholder="Thursday">
+                        <input type="text" id="prog-fri" placeholder="Friday">
+                        <input type="text" id="prog-sat" placeholder="Saturday">
+                        <input type="text" id="prog-sun" placeholder="Sunday">
+                        <button type="submit" class="btn-primary w-100">
+                            <span class="btn-text">Save Program</span>
                             <div class="loader hidden"></div>
                         </button>
                     </form>
