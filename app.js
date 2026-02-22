@@ -17,6 +17,7 @@ const db = getFirestore(firebaseApp);
 
 window.app = {
     user: null,
+    userData: {}, // Cache for profile data (Name, Program, etc.)
     isLoginMode: true,
     allActivities: [], 
     currentDate: new Date(),
@@ -68,21 +69,14 @@ window.app = {
             const [snapW, snapR] = await Promise.all([getDocs(qW), getDocs(qR)]);
             
             let activities = [];
-            
             const parseDate = (d) => {
                 if (d && typeof d.toMillis === 'function') return d.toMillis();
                 if (typeof d === 'string') return new Date(d).getTime();
                 return d;
             };
 
-            snapW.forEach(doc => {
-                const data = doc.data();
-                activities.push({ id: doc.id, ...data, date: parseDate(data.date), type: 'Gym' });
-            });
-            snapR.forEach(doc => {
-                const data = doc.data();
-                activities.push({ id: doc.id, ...data, date: parseDate(data.date), type: 'Run' });
-            });
+            snapW.forEach(doc => activities.push({ id: doc.id, ...doc.data(), date: parseDate(doc.data().date), type: 'Gym' }));
+            snapR.forEach(doc => activities.push({ id: doc.id, ...doc.data(), date: parseDate(doc.data().date), type: 'Run' }));
             
             activities.sort((a, b) => b.date - a.date);
             this.allActivities = activities;
@@ -95,6 +89,16 @@ window.app = {
 
     async loadDashboard() {
         if(!this.user) return;
+        
+        // --- 5️⃣ GYM PROGRAM DASHBOARD DISPLAY ---
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const todayStr = dayNames[new Date().getDay()];
+        document.getElementById('today-day-name').textContent = todayStr.charAt(0).toUpperCase() + todayStr.slice(1);
+        
+        const todayPlan = this.userData?.program?.[todayStr];
+        document.getElementById('today-program-text').textContent = todayPlan ? todayPlan : "Rest Day / No training today";
+        // ------------------------------------------
+
         const list = document.getElementById('recent-activity-list');
         list.innerHTML = '<p style="text-align:center; padding: 20px;">Loading...</p>';
         
@@ -115,8 +119,10 @@ window.app = {
                 div.innerHTML = `<div><h4>${act.exercise}</h4><p>${dateStr} • ${act.sets}x${act.reps}</p></div>
                                  <div class="pr-badge">${act.weight} kg</div>`;
             } else {
+                // Backward compatibility for old "pace" saves, prioritize new "speed" saves
+                const speedDisp = act.speed ? act.speed : (act.distance / (act.time/60)).toFixed(2);
                 div.innerHTML = `<div><h4>Running</h4><p>${dateStr} • ${act.time} min</p></div>
-                                 <div class="pr-badge">${act.distance} km</div>`;
+                                 <div class="pr-badge">${speedDisp} km/h</div>`;
             }
             list.appendChild(div);
         });
@@ -186,8 +192,9 @@ window.app = {
         });
 
         const count = daysTrainedThisWeek.size;
+        // 4️⃣ HIGHLIGHT COLOR FIXED (#f44336)
         document.getElementById('weekly-summary-content').innerHTML = `
-            You trained <span style="color:var(--accent); font-weight:800; font-size:1.5rem;">${count}</span> days this week.<br>
+            You trained <span style="color:#f44336; font-weight:800; font-size:1.5rem;">${count}</span> days this week.<br>
             <span style="font-size: 0.9rem; color: #666;">Goal Consistency: ${Math.round((count/7)*100)}%</span>
         `;
     },
@@ -212,8 +219,17 @@ window.app = {
                 div.style.flexDirection = 'column';
                 div.style.alignItems = 'flex-start';
                 
-                let details = act.type === 'Gym' ? `${act.sets} sets x ${act.reps} reps @ ${act.weight}kg` : `${act.distance}km in ${act.time} min`;
-                let title = act.type === 'Gym' ? act.exercise : 'Running';
+                let details;
+                let title;
+
+                if (act.type === 'Gym') {
+                    details = `${act.sets} sets x ${act.reps} reps @ ${act.weight}kg`;
+                    title = act.exercise;
+                } else {
+                    const speedDisp = act.speed ? act.speed : (act.distance / (act.time/60)).toFixed(2);
+                    details = `${act.distance}km in ${act.time} min (${speedDisp} km/h)`;
+                    title = 'Running';
+                }
 
                 div.innerHTML = `
                     <div style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 10px;">
@@ -246,11 +262,7 @@ window.app = {
                 const reps = prompt(`Edit Reps for ${activity.exercise}:`, activity.reps);
                 if(reps === null) return;
 
-                updateData = {
-                    weight: parseFloat(weight),
-                    sets: parseInt(sets),
-                    reps: parseInt(reps)
-                };
+                updateData = { weight: parseFloat(weight), sets: parseInt(sets), reps: parseInt(reps) };
                 if(isNaN(updateData.weight) || isNaN(updateData.sets) || isNaN(updateData.reps)) {
                     return this.showToast("Invalid numbers entered", true);
                 }
@@ -260,10 +272,11 @@ window.app = {
                 const time = prompt("Edit Time (min):", activity.time);
                 if(time === null) return;
 
+                // 3️⃣ KM/H LOGIC UPDATE
                 updateData = {
                     distance: parseFloat(dist),
                     time: parseFloat(time),
-                    pace: +(parseFloat(time) / parseFloat(dist)).toFixed(2)
+                    speed: +(parseFloat(dist) / (parseFloat(time)/60)).toFixed(2)
                 };
                 if(isNaN(updateData.distance) || isNaN(updateData.time)) {
                     return this.showToast("Invalid numbers entered", true);
@@ -310,10 +323,23 @@ window.app = {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
+            this.userData = data; // Cache update
+            
             document.getElementById('prof-name').value = data.name || '';
             document.getElementById('prof-weight').value = data.weight || '';
             document.getElementById('prof-height').value = data.height || '';
             document.getElementById('prof-goal').value = data.goal || '';
+            
+            // Populate Gym Program
+            const prog = data.program || {};
+            document.getElementById('prog-mon').value = prog.monday || '';
+            document.getElementById('prog-tue').value = prog.tuesday || '';
+            document.getElementById('prog-wed').value = prog.wednesday || '';
+            document.getElementById('prog-thu').value = prog.thursday || '';
+            document.getElementById('prog-fri').value = prog.friday || '';
+            document.getElementById('prog-sat').value = prog.saturday || '';
+            document.getElementById('prog-sun').value = prog.sunday || '';
+
             document.getElementById('user-greeting').textContent = `Hello, ${data.name || 'Athlete'}`;
         }
 
@@ -356,14 +382,27 @@ document.getElementById('close-modal').addEventListener('click', () => {
     document.getElementById('day-modal').classList.add('hidden');
 });
 
-onAuthStateChanged(auth, (user) => {
+// 1️⃣ PROFILE NAME PERSISTENCE UPDATE
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         app.user = user;
+        
+        // Instantly load user data to fix the greeting
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        if (docSnap.exists()) {
+            app.userData = docSnap.data();
+            document.getElementById('user-greeting').textContent = `Hello, ${app.userData.name || 'Athlete'}`;
+        } else {
+            app.userData = {};
+            document.getElementById('user-greeting').textContent = `Hello, Athlete`;
+        }
+
         document.getElementById('view-auth').classList.remove('active');
         document.getElementById('main-app').classList.remove('hidden');
         app.showView('dashboard');
     } else {
         app.user = null;
+        app.userData = {};
         document.getElementById('main-app').classList.add('hidden');
         app.showView('auth');
     }
@@ -431,14 +470,16 @@ document.getElementById('workout-form').addEventListener('submit', async (e) => 
     }
 });
 
+// 3️⃣ KM/H SPEED LIVE CALCULATOR
 document.getElementById('run-form').addEventListener('input', () => {
     const dist = parseFloat(document.getElementById('run-distance').value);
     const time = parseFloat(document.getElementById('run-time').value);
     const preview = document.getElementById('run-pace-preview');
     if(dist > 0 && time > 0) {
-        preview.textContent = `Pace: ${(time/dist).toFixed(2)} min/km`;
+        const speed = dist / (time / 60);
+        preview.textContent = `Speed: ${speed.toFixed(2)} km/h`;
     } else {
-        preview.textContent = `Pace: 0.00 min/km`;
+        preview.textContent = `Speed: 0.00 km/h`;
     }
 });
 
@@ -455,13 +496,14 @@ document.getElementById('run-form').addEventListener('submit', async (e) => {
     }
 
     app.toggleLoading('run-form button', true);
-    const data = { distance: dist, time: time, pace: +(time/dist).toFixed(2), date: Date.now() };
+    const speed = +(dist / (time / 60)).toFixed(2);
+    const data = { distance: dist, time: time, speed: speed, date: Date.now() };
 
     try {
         await addDoc(collection(db, `users/${app.user.uid}/runs`), data);
         app.showToast("Run saved successfully!");
         e.target.reset();
-        document.getElementById('run-pace-preview').textContent = `Pace: 0.00 min/km`;
+        document.getElementById('run-pace-preview').textContent = `Speed: 0.00 km/h`;
         await app.loadCalendar(); 
         app.showView('calendar');
     } catch (error) {
@@ -486,11 +528,39 @@ document.getElementById('profile-form').addEventListener('submit', async (e) => 
 
     try {
         await setDoc(doc(db, "users", app.user.uid), data, { merge: true });
+        app.userData = { ...app.userData, ...data }; // Update cache
         app.showToast("Profile updated successfully!");
         document.getElementById('user-greeting').textContent = `Hello, ${data.name || 'Athlete'}`;
     } catch (error) {
         app.showToast("Error updating profile", true);
     } finally {
         app.toggleLoading('profile-form button', false);
+    }
+});
+
+// 5️⃣ GYM PROGRAM FORM SUBMIT
+document.getElementById('program-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if(!app.user) return;
+
+    app.toggleLoading('program-form button', true);
+    const programData = {
+        monday: document.getElementById('prog-mon').value.trim(),
+        tuesday: document.getElementById('prog-tue').value.trim(),
+        wednesday: document.getElementById('prog-wed').value.trim(),
+        thursday: document.getElementById('prog-thu').value.trim(),
+        friday: document.getElementById('prog-fri').value.trim(),
+        saturday: document.getElementById('prog-sat').value.trim(),
+        sunday: document.getElementById('prog-sun').value.trim(),
+    };
+
+    try {
+        await setDoc(doc(db, "users", app.user.uid), { program: programData }, { merge: true });
+        app.userData.program = programData; // Update cache
+        app.showToast("Gym Program saved successfully!");
+    } catch (error) {
+        app.showToast("Error saving program", true);
+    } finally {
+        app.toggleLoading('program-form button', false);
     }
 });
