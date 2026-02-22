@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexo</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="toast" class="toast hidden">Message</div>
+
+        <div id="view-auth" class="view active">
+            <div class="header-card">
+                <h1>NEXO</h1>
+            </div>
+            <div class="card">
+                <h2 id="auth-title">Login</h2>
+                <form id="auth-form">
+                    <input type="email" id="auth-email" placeholder="Email" required>
+                    <input type="password" id="auth-password" placeholder="Password" required>
+                    <button type="submit" class="btn-primary" id="auth-btn">
+                        <span class="btn-text">Login</span>
+                        <div class="loader hidden"></div>
+                    </button>
+                </form>
+                <p class="toggle-auth" id="toggle-auth">Need an account? Sign up</p>
+            </div>
+        </div>
+
+        <div id="main-app" class="hidden">
+            <div class="top-nav">
+                <span id="user-greeting">Hello, Athlete</span>
+                <button id="btn-logout" class="btn-secondary btn-small">Logout</button>
+            </div>
+
+            <div id="view-dashboard" class="view">
+                <div class="card dark-card">
+                    <h2>Quick Actions</h2>
+                    <div class="action-grid">
+                        <button class="btn-primary" onclick="app.showView('workout')">+ Gym Workout</button>
+                        <button class="btn-secondary" onclick="app.showView('run')">+ Run</button>
+                    </div>
+                </div>
+                
+                <h3 class="section-title">Recent Activity</h3>
+                <div id="recent-activity-list" class="list-container"></div>
+            </div>
+
+            <div id="view-workout" class="view">
+                <div class="card">
+                    <h2>Log Workout</h2>
+                    <form id="workout-form">
+                        <input type="text" id="wo-exercise" placeholder="Exercise Name (e.g. Bench Press)" required>
+                        <div class="input-row">
+                            <input type="number" id="wo-weight" placeholder="Weight (kg)" required>
+                            <input type="number" id="wo-sets" placeholder="Sets" required>
+                            <input type="number" id="wo-reps" placeholder="Reps" required>
+                        </div>
+                        <button type="submit" class="btn-primary w-100">
+                            <span class="btn-text">Save Workout</span>
+                            <div class="loader hidden"></div>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="view-run" class="view">
+                <div class="card">
+                    <h2>Log Run</h2>
+                    <form id="run-form">
+                        <input type="number" id="run-distance" step="0.01" placeholder="Distance (km)" required>
+                        <input type="number" id="run-time" placeholder="Time (minutes)" required>
+                        <div class="stats-preview" id="run-pace-preview">Pace: 0.00 min/km</div>
+                        <button type="submit" class="btn-primary w-100">
+                            <span class="btn-text">Save Run</span>
+                            <div class="loader hidden"></div>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="view-calendar" class="view">
+                <div class="card dark-card">
+                    <h2>Weekly Summary</h2>
+                    <div id="weekly-summary-content" class="stats-preview" style="font-size: 1.2rem;">
+                        Loading...
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="calendar-header">
+                        <button class="btn-secondary btn-small" id="prev-month">&lt;</button>
+                        <h2 id="current-month-year" style="margin:0;">Month Year</h2>
+                        <button class="btn-secondary btn-small" id="next-month">&gt;</button>
+                    </div>
+                    
+                    <div class="calendar-days-header">
+                        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid"></div>
+                </div>
+            </div>
+
+            <div id="view-profile" class="view">
+                <div class="card dark-card">
+                    <h2>Profile & Goals</h2>
+                    <form id="profile-form">
+                        <input type="text" id="prof-name" placeholder="Name">
+                        <div class="input-row">
+                            <input type="number" id="prof-weight" placeholder="Weight">
+                            <input type="number" id="prof-height" placeholder="Height">
+                        </div>
+                        <input type="text" id="prof-goal" placeholder="Main Fitness Goal">
+                        <button type="submit" class="btn-secondary w-100">
+                            <span class="btn-text">Update Profile</span>
+                            <div class="loader hidden"></div>
+                        </button>
+                    </form>
+                </div>
+
+                <h3 class="section-title">Personal Records</h3>
+                <div id="pr-list" class="list-container"></div>
+            </div>
+
+            <nav class="bottom-nav">
+                <button class="nav-item active" onclick="app.showView('dashboard')">Home</button>
+                <button class="nav-item" onclick="app.showView('workout')">Gym</button>
+                <button class="nav-item" onclick="app.showView('run')">Run</button>
+                <button class="nav-item" onclick="app.showView('calendar')">Calendar</button>
+                <button class="nav-item" onclick="app.showView('profile')">Profile</button>
+            </nav>
+        </div>
+    </div>
+
+    <div id="day-modal" class="modal hidden">
+        <div class="modal-content card">
+            <div class="modal-header">
+                <h2 id="modal-date-title">Date Details</h2>
+                <button class="btn-secondary btn-small" id="close-modal">X</button>
+            </div>
+            <div id="modal-activities-list"></div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
